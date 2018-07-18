@@ -1,34 +1,35 @@
 
+//https://github.com/adafruit/Adafruit_MQTT_Library <----- Libreria del server MQTT
 #include <ESP8266WiFi.h>
 #include "Adafruit_MQTT.h"
 #include "Adafruit_MQTT_Client.h"
 
 #define WIFI_SSID "BAYRON PEREZ"//Red wifi de house
-#define WIFI_PASS "VILLEGAS" // Red Wifi del house
+#define WIFI_PASS "xxxxxx" // Red Wifi del house
 
 #define WIFI_SSID2 "profilelighting1" //  red wifi del trabajo
-#define WIFI_PASS2 "luces2017"// Red wifi del trabajo
+#define WIFI_PASS2 "xxxxx"// Red wifi del trabajo
 
-#define MQTT_SERV "io.adafruit.com"
-#define MQTT_PORT 1883
-#define MQTT_NAME "johnbayronp"
+#define MQTT_SERV "io.adafruit.com" // Servidor donde alojamos nuestros datos 
+#define MQTT_PORT 1883 // Puerto del servidor 
+#define MQTT_NAME "johnbayronp" // Nombre y ID del servidor io.adafruit
 #define MQTT_PASS "9d5bec628b51426584d3df32c1ce2dde"
-#define LED D0
-#define LED2 D3
+#define LED D0 // Posicion de salida de la tarjeta NodeMCU para feeds -> tv 
+#define LED2 D3 // Posicion de salida de la tarjeta NodeMCU para feeds -> ventilador
 
-WiFiClient client;
-Adafruit_MQTT_Client mqtt(&client, MQTT_SERV, MQTT_PORT, MQTT_NAME, MQTT_PASS);
+WiFiClient client; //Recibimos el cliente
+Adafruit_MQTT_Client mqtt(&client, MQTT_SERV, MQTT_PORT, MQTT_NAME, MQTT_PASS); //asignamos el cliente , servidor, puerto, nombre , contraseña
 
-Adafruit_MQTT_Subscribe onoff = Adafruit_MQTT_Subscribe(&mqtt, MQTT_NAME "/feeds/tv");
+Adafruit_MQTT_Subscribe onoff = Adafruit_MQTT_Subscribe(&mqtt, MQTT_NAME "/feeds/tv"); // los feeds creados en el servidor io.adafruit Pasamos el cliente(x,direccion);
 
-Adafruit_MQTT_Subscribe onoff2 = Adafruit_MQTT_Subscribe(&mqtt, MQTT_NAME "/feeds/ventilador");
-//in the setup, we'll connect to the WiFi and the MQTT server:
+Adafruit_MQTT_Subscribe onoff2 = Adafruit_MQTT_Subscribe(&mqtt, MQTT_NAME "/feeds/ventilador"); // los feeds creados en el servidor io.adafruit
 
+// Setup, Conectaremos ala red wifi con MQTT Server
 void setup()
 {
   Serial.begin(9600);
 
-  //Connect to WiFi
+  //Conectar a WiFi
   Serial.println("\n\nConectando Wifi... ");
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   
@@ -44,41 +45,40 @@ void setup()
   
   Serial.println("Conectado a la red! ");
 
-  //Subscribe to the onoff topic
+  //Suscribir los topicos creados onoff y onff2
   mqtt.subscribe(&onoff);
   mqtt.subscribe(&onoff2);
 
-  pinMode(LED, OUTPUT);
+  pinMode(LED, OUTPUT); // configuramos las salidas de nuestros pines en este caso de la nodemcu D0, D3
   pinMode(LED2, OUTPUT);
 }
 void loop()
 {
-  //Connect/Reconnect to MQTT
+  //Conectar y reconectar a MQTT
   MQTT_connect();
 
-  //Read from our subscription queue until we run out, or
-  //wait up to 5 seconds for subscription to update
+  //Leemos las suscripciones , para que los feeds se ejecuten correctamente
+  //Esperamos 5 minutos para que la suscripcion se actualize
   Adafruit_MQTT_Subscribe * subscription;
   while ((subscription = mqtt.readSubscription(5000)))
   {
-     
-    //If we're in here, a subscription updated...
+  
+    // Si son correctas las suscripciones y actualizamos.
     if (subscription == &onoff || subscription ==&onoff2)
     {
-      //Print the new value to the serial monitor
+      //Imprimimos el nuevo valor en nuestra consola 
       Serial.print("onoff: ");
-      Serial.println((char*) onoff.lastread);
+      Serial.println((char*) onoff.lastread); 
 
       
 
       Serial.print("onoff2: ");
       Serial.println((char*) onoff2.lastread);
-      //If the new value is  "ON", turn the light on.
-      //Otherwise, turn it off. Afuera Outside 
      
-      if (!strcmp((char*) onoff.lastread, "1"))
+      //Leemos los valores para dar acciones 
+      if (!strcmp((char*) onoff.lastread, "1")) // valor que asignamos en los applets de IFTTT (Puede resivir char)
       {
-        //active low logic
+        //TV APAGADO
         digitalWrite(LED, LOW);
       } 
       else if(!strcmp((char*) onoff.lastread, "0"))
@@ -87,7 +87,7 @@ void loop()
       }
 
       
-      // Living room - cuarto 
+      // VENTILADOR
       if(!strcmp((char*) onoff2.lastread, "3"))
       {
         digitalWrite(LED2, LOW);
@@ -98,10 +98,11 @@ void loop()
   }
 }
 
+//conectamos el servidor MQTT
 void MQTT_connect() 
 {
   int8_t ret;
-  // Stop if already connected
+  // Paramos la conexion, si esta conectado.
   if (mqtt.connected())
   {
     return;
@@ -109,19 +110,18 @@ void MQTT_connect()
 
   Serial.print("Connecting to MQTT... ");
   uint8_t retries = 3;
-  while ((ret = mqtt.connect()) != 0) // connect will return 0 for connected
+  while ((ret = mqtt.connect()) != 0) // reconectamos mientras retorne el valor 0.
   { 
     Serial.println(mqtt.connectErrorString(ret));
     Serial.println("Retrying MQTT connection in 5 seconds...");
     mqtt.disconnect();
-    delay(5000);  // wait 5 seconds
+    delay(5000);  // Esperemos 5 segundos
     retries--;
     if (retries == 0) 
     {
-      // basically die and wait for WDT to reset me
+      // Basicamente muere y esperamos que resetee
       while (1);
     }
   }
   Serial.println("MQTT Connected!");
 }
-  // ping the server to keep the mqtt connection alive<br>  if (!mqtt.ping())<br>  {<br>    mqtt.disconnect();<br>  }<br>}
