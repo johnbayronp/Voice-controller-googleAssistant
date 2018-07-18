@@ -2,7 +2,7 @@
 
 
 libreria del server MQTT:
-https://github.com/adafruit/Adafruit_MQTT_Library
+https://github.com/johnbayronp/Adafruit_MQTT_Library
 
 Server donde alojaremos el comportamiento de nuestros feeds:
 https://io.adafruit.com
